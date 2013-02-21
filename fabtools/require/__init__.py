@@ -10,6 +10,7 @@ import fabtools.require.pkg
 import fabtools.require.postfix
 import fabtools.require.postgres
 import fabtools.require.python
+import fabtools.require.rabbitmq
 import fabtools.require.redis
 import fabtools.require.rpm
 import fabtools.require.service
