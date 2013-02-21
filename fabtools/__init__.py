@@ -12,6 +12,7 @@ import fabtools.pkg
 import fabtools.postgres
 import fabtools.python
 import fabtools.python_distribute
+import fabtools.rabbitmq
 import fabtools.rpm
 import fabtools.service
 import fabtools.shorewall
