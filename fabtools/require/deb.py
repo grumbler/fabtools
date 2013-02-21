@@ -38,7 +38,7 @@ def source(name, uri, distribution, *components):
         update_index()
 
 
-def ppa(name):
+def ppa(name, yes=False):
     """
     Require a `PPA`_ package source.
 
@@ -56,9 +56,10 @@ def ppa(name):
     distrib = distrib_codename()
     source = '%(user)s-%(repo)s-%(distrib)s.list' % locals()
 
+    yes = '--yes ' if yes else ''
     if not is_file(source):
         package('python-software-properties')
-        run_as_root('add-apt-repository %s' % name)
+        run_as_root('add-apt-repository {yes} {name}'.format(yes=yes, name=name))
         update_index()
 
 
