@@ -3,9 +3,7 @@
 
 from __future__ import with_statement
 
-from fabric.api import *
-
-from fabtools.vagrant import vagrant
+from fabric.api import task
 
 
 @task
@@ -24,3 +22,9 @@ def require_oracle_jdk():
 
     assert is_file('/opt/jdk/bin/java')
     assert oracle_jdk.version() == oracle_jdk.DEFAULT_VERSION
+
+    # Require Oracle JDK version 6
+    require.oracle_jdk.installed('6u45-b06')
+
+    assert is_file('/opt/jdk/bin/java')
+    assert oracle_jdk.version() == '6u45-b06'

@@ -1,6 +1,5 @@
 from __future__ import with_statement
 
-import os.path
 try:
     import json
 except ImportError:
@@ -19,11 +18,6 @@ def install_nodejs():
     from fabtools import require
     from fabtools.files import is_file
 
-    # Upload local copy of source archive to speed up tests
-    local_cache = '~/.vagrant.d/cache/fabtools/node-v%s.tar.gz' % nodejs.DEFAULT_VERSION
-    if os.path.exists(local_cache):
-        put(local_cache)
-
     # Install Node.js from source
     if nodejs.version() != nodejs.DEFAULT_VERSION:
         nodejs.install_from_source()
@@ -40,7 +34,7 @@ def install_nodejs():
 
     nodejs.uninstall_package('underscore')
 
-    assert nodejs.package_version('underscore') == None
+    assert nodejs.package_version('underscore') is None
     assert not is_file('/usr/local/lib/node_modules/underscore/underscore.js')
 
     # Install / uninstall local package
@@ -52,7 +46,7 @@ def install_nodejs():
 
     nodejs.uninstall_package('underscore', local=True)
 
-    assert nodejs.package_version('underscore', local=True) == None
+    assert nodejs.package_version('underscore', local=True) is None
     assert not is_file('node_modules/underscore/underscore.js')
 
     # Install dependencies from package.json file
@@ -81,11 +75,6 @@ def require_nodejs():
     from fabtools import nodejs
     from fabtools import require
     from fabtools.files import is_file
-
-    # Upload local copy of source archive to speed up tests
-    local_cache = '~/.vagrant.d/cache/fabtools/node-v%s.tar.gz' % nodejs.DEFAULT_VERSION
-    if os.path.exists(local_cache):
-        put(local_cache)
 
     # Require Node.js
 

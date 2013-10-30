@@ -13,7 +13,7 @@ import os
 from tempfile import mkstemp
 from urlparse import urlparse
 
-from fabric.api import *
+from fabric.api import hide, put, run, settings
 
 from fabtools.files import is_file, is_dir, md5sum
 from fabtools.utils import run_as_root
@@ -51,7 +51,26 @@ def directory(path, use_sudo=False, owner='', group='', mode=''):
     if mode and fabtools.files.mode(path, use_sudo) != mode:
         func('chmod %(mode)s "%(path)s"' % locals())
 
+def directories(path_list, use_sudo=False, owner='', group='', mode=''):
+    """
+    Require a list of directories to exist.
 
+    ::
+
+        from fabtools import require
+        dirs=[
+            '/tmp/mydir',
+            '/tmp/mydear',
+            '/tmp/my/dir'
+        ]
+        require.directories(dirs, owner='alice', mode='750')
+        
+    .. note:: This function can be accessed directly from the
+              ``fabtools.require`` module for convenience.
+    """
+    for path in path_list:
+        directory(path, use_sudo, owner, group, mode)
+        
 def file(path=None, contents=None, source=None, url=None, md5=None,
          use_sudo=False, owner=None, group='', mode=None, verify_remote=True):
     """
@@ -103,7 +122,7 @@ def file(path=None, contents=None, source=None, url=None, md5=None,
             path = os.path.basename(urlparse(url).path)
 
         if not is_file(path) or md5 and md5sum(path) != md5:
-            func('wget --progress=dot:mega %(url)s' % locals())
+            func('wget --progress=dot:mega %(url)s -O %(path)s' % locals())
 
     # 3) A local filename, or a content string, is specified
     else:
@@ -135,11 +154,7 @@ def file(path=None, contents=None, source=None, url=None, md5=None,
                 (verify_remote and
                     md5sum(path, use_sudo=use_sudo) != digest.hexdigest())):
             with settings(hide('running')):
-                if source:
-                    put(source, path, use_sudo=use_sudo)
-                else:
-                    put(tmp_file.name, path, use_sudo=use_sudo)
-                    os.remove(tmp_file.name)
+                put(source, path, use_sudo=use_sudo)
 
         if t is not None:
             os.unlink(source)

@@ -10,10 +10,43 @@ from __future__ import with_statement
 
 from fabric.utils import puts
 
-from fabtools.deb import *
+from fabtools.deb import (
+    add_apt_key,
+    apt_key_exists,
+    install,
+    is_installed,
+    uninstall,
+    update_index,
+)
 from fabtools.files import is_file, watch
+from fabtools.system import distrib_codename
 from fabtools.utils import run_as_root
-import fabtools.require
+
+
+def key(keyid, filename=None, url=None, keyserver='subkeys.pgp.net', update=False):
+    """
+    Require a PGP key for APT.
+
+    ::
+
+        from fabtools import require
+
+        # Varnish signing key from URL
+        require.deb.key('C4DEFFEB', url='http://repo.varnish-cache.org/debian/GPG-key.txt')
+
+        # Nginx signing key from default key server (subkeys.pgp.net)
+        require.deb.key('7BD9BF62')
+
+        # From custom key server
+        require.deb.key('7BD9BF62', keyserver='keyserver.ubuntu.com')
+
+        # From file
+        require.deb.key('7BD9BF62', filename='nginx.asc')
+
+    """
+
+    if not apt_key_exists(keyid):
+        add_apt_key(keyid=keyid, filename=filename, url=url, keyserver=keyserver, update=update)
 
 
 def source(name, uri, distribution, *components):
@@ -28,11 +61,14 @@ def source(name, uri, distribution, *components):
         require.deb.source('mongodb', 'http://downloads-distro.mongodb.org/repo/ubuntu-upstart', 'dist', '10gen')
 
     """
+
+    from fabtools.require import file as require_file
+
     path = '/etc/apt/sources.list.d/%(name)s.list' % locals()
     components = ' '.join(components)
     source_line = 'deb %(uri)s %(distribution)s %(components)s\n' % locals()
     with watch(path) as config:
-        fabtools.require.file(path=path, contents=source_line, use_sudo=True)
+        require_file(path=path, contents=source_line, use_sudo=True)
     if config.changed:
         puts('Added APT repository: %s' % source_line)
         update_index()
@@ -56,14 +92,13 @@ def ppa(name, yes=False):
     distrib = distrib_codename()
     source = '%(user)s-%(repo)s-%(distrib)s.list' % locals()
 
-    yes = '--yes ' if yes else ''
     if not is_file(source):
         package('python-software-properties')
-        run_as_root('add-apt-repository {yes} {name}'.format(yes=yes, name=name))
+        run_as_root('add-apt-repository %s' % name, pty=False)
         update_index()
 
 
-def package(pkg_name, update=False):
+def package(pkg_name, update=False, version=None):
     """
     Require a deb package to be installed.
 
@@ -71,10 +106,15 @@ def package(pkg_name, update=False):
 
         from fabtools import require
 
+        # Require a package
         require.deb.package('foo')
+
+        # Require a specific version
+        require.deb.package('firefox', version='11.0+build1-0ubuntu4')
+
     """
     if not is_installed(pkg_name):
-        install(pkg_name, update)
+        install(pkg_name, update=update, version=version)
 
 
 def packages(pkg_list, update=False):

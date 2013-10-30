@@ -4,9 +4,11 @@ fabtools
 .. toctree::
    :maxdepth: 1
 
+   apache
    cron
    deb
    files
+   git
    group
    mysql
    network
@@ -22,6 +24,7 @@ fabtools
    shorewall
    supervisor
    system
+   systemd
    user
    utils
    vagrant

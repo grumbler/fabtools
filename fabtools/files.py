@@ -4,9 +4,10 @@ Files and directories
 """
 from __future__ import with_statement
 
+from pipes import quote
 import os
 
-from fabric.api import *
+from fabric.api import abort, hide, run, settings, sudo, warn
 from fabric.contrib.files import upload_template as _upload_template
 from fabric.contrib.files import exists
 
@@ -92,7 +93,7 @@ def mode(path, use_sudo=False):
 
 
 def upload_template(filename, template, context=None, use_sudo=False,
-                  user="root", mkdir=False, chown=False):
+                    user="root", mkdir=False, chown=False):
     """
     Upload a template file.
     """
@@ -103,7 +104,7 @@ def upload_template(filename, template, context=None, use_sudo=False,
         else:
             run('mkdir -p "%s"' % d)
     _upload_template(os.path.join("templates", template), filename,
-                    context=context, use_sudo=use_sudo)
+                     context=context, use_sudo=use_sudo)
     if chown:
         run_as_root('chown %s:%s "%s"' % (user, user, filename))
 
@@ -113,7 +114,8 @@ def md5sum(filename, use_sudo=False):
     Compute the MD5 sum of a file.
     """
     func = use_sudo and run_as_root or run
-    with settings(hide('running', 'stdout', 'stderr', 'warnings'), warn_only=True):
+    with settings(hide('running', 'stdout', 'stderr', 'warnings'),
+                  warn_only=True):
         # Linux (LSB)
         if exists(u'/usr/bin/md5sum'):
             res = func(u'/usr/bin/md5sum %(filename)s' % locals())
@@ -123,8 +125,20 @@ def md5sum(filename, use_sudo=False):
         # SmartOS Joyent build
         elif exists(u'/opt/local/gnu/bin/md5sum'):
             res = func(u'/opt/local/gnu/bin/md5sum %(filename)s' % locals())
+        # SmartOS Joyent build
+        # (the former doesn't exist, at least on joyent_20130222T000747Z)
+        elif exists(u'/opt/local/bin/md5sum'):
+            res = func(u'/opt/local/bin/md5sum %(filename)s' % locals())
+        # Try to find ``md5sum`` or ``md5`` on ``$PATH`` or abort
         else:
-            abort('No MD5 utility was found on this system.')
+            md5sum = func(u'which md5sum')
+            md5 = func(u'which md5')
+            if exists(md5sum):
+                res = func('%(md5sum)s %(filename)s' % locals())
+            elif exists(md5):
+                res = func('%(md5)s %(filename)s' % locals())
+            else:
+                abort('No MD5 utility was found on this system.')
 
     if res.succeeded:
         parts = res.split()
@@ -203,3 +217,16 @@ class watch(object):
                 break
         if self.changed and self.callback:
             self.callback()
+
+
+def uncommented_lines(filename, use_sudo=False):
+    """
+    Get the lines of a remote file, ignoring empty or commented ones
+    """
+    func = run_as_root if use_sudo else run
+    res = func('cat %s' % quote(filename), quiet=True)
+    if res.succeeded:
+        return [line for line in res.splitlines()
+                if line and not line.startswith('#')]
+    else:
+        return []

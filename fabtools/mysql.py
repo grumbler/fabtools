@@ -7,7 +7,7 @@ This module provides tools for creating MySQL users and databases.
 """
 from __future__ import with_statement
 
-from fabric.api import *
+from fabric.api import env, hide, prompt, puts, run, settings
 
 from fabtools.utils import run_as_root
 
@@ -42,11 +42,15 @@ def user_exists(name, host='localhost', **kwargs):
     Check if a MySQL user exists.
     """
     with settings(hide('running', 'stdout', 'stderr', 'warnings'), warn_only=True):
-        res = _query("use mysql; SELECT User FROM user WHERE User = '%(name)s' AND Host = '%(host)s';" % {
-            'name': name,
-            'host': host,
-        }, **kwargs)
-    return res.succeeded and (res == name)
+        res = _query("""
+            use mysql;
+            SELECT COUNT(*) FROM user
+                WHERE User = '%(name)s' AND Host = '%(host)s';
+            """ % {
+                'name': name,
+                'host': host,
+            }, **kwargs)
+    return res.succeeded and (int(res) == 1)
 
 
 def create_user(name, password, host='localhost', **kwargs):
@@ -76,14 +80,15 @@ def database_exists(name, **kwargs):
     Check if a MySQL database exists.
     """
     with settings(hide('running', 'stdout', 'stderr', 'warnings'), warn_only=True):
-        res = _query("use mysql; SELECT Db FROM db WHERE Db = '%(name)s';" % {
+        res = _query("SHOW DATABASES LIKE '%(name)s';" % {
             'name': name
         }, **kwargs)
 
     return res.succeeded and (res == name)
 
 
-def create_database(name, owner=None, owner_host='localhost', charset='utf8', collate='utf8_general_ci', **kwargs):
+def create_database(name, owner=None, owner_host='localhost', charset='utf8',
+                    collate='utf8_general_ci', **kwargs):
     """
     Create a MySQL database.
 

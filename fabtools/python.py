@@ -13,23 +13,24 @@ from __future__ import with_statement
 
 from contextlib import contextmanager
 from distutils.version import StrictVersion as V
+from pipes import quote
 import os
 import posixpath
 
-from fabric.api import *
+from fabric.api import cd, hide, prefix, run, settings, sudo
 from fabric.utils import puts
 
-from fabtools.utils import run_as_root
+from fabtools.utils import abspath, run_as_root
 
 
-def is_pip_installed(version=None):
+def is_pip_installed(version=None, use_python='python'):
     """
     Check if `pip`_ is installed.
 
     .. _pip: http://www.pip-installer.org/
     """
     with settings(hide('running', 'warnings', 'stderr', 'stdout'), warn_only=True):
-        res = run('pip --version 2>/dev/null')
+        res = run('%(use_python)s -m pip --version 2>/dev/null' % locals())
         if res.failed:
             return False
         if version is None:
@@ -43,7 +44,7 @@ def is_pip_installed(version=None):
                 return True
 
 
-def install_pip():
+def install_pip(use_python='python'):
     """
     Install the latest version of `pip`_.
 
@@ -59,22 +60,27 @@ def install_pip():
     """
     with cd('/tmp'):
         run('curl --silent -O https://raw.github.com/pypa/pip/master/contrib/get-pip.py')
-        run_as_root('python get-pip.py')
+        run_as_root('%(use_python)s get-pip.py' % locals(), pty=False)
 
 
-def is_installed(package):
+def is_installed(package, use_python='python'):
     """
     Check if a Python package is installed.
     """
     options = []
     options = ' '.join(options)
     with settings(hide('running', 'stdout', 'stderr', 'warnings'), warn_only=True):
-        res = run('pip freeze %(options)s' % locals())
+        res = run('%(use_python)s -m pip freeze %(options)s' % locals())
     packages = [line.split('==')[0] for line in res.splitlines()]
     return (package in packages)
 
 
-def install(packages, upgrade=False, use_mirrors=True, use_sudo=False, user=None, download_cache=None):
+def _get_python_version(use_python):
+    return run("""python -c 'import sys; print(".".join(map(str, sys.version_info[0:3])))'""").strip()
+
+
+def install(packages, upgrade=False, use_mirrors=False, use_sudo=False,
+            user=None, download_cache=None, quiet=False, use_python='python'):
     """
     Install Python package(s) using `pip`_.
 
@@ -100,15 +106,28 @@ def install(packages, upgrade=False, use_mirrors=True, use_sudo=False, user=None
         options.append('--upgrade')
     if download_cache:
         options.append('--download-cache="%s"' % download_cache)
+    if quiet:
+        options.append('--quiet')
     options = ' '.join(options)
-    command = 'pip install %(options)s %(packages)s' % locals()
-    if use_sudo:
-        sudo(command, user=user)
+
+    version = _get_python_version(use_python).split('.')
+
+    if (int(version[0]) < 3) and (int(version[1]) < 7):
+        command = 'pip-%s.%s' % (version[0], version[1])
     else:
-        run(command)
+        command = '%(use_python)s -m pip' % locals()
+
+    command += ' install %(options)s %(packages)s' % locals()
+
+    if use_sudo:
+        sudo(command, user=user, pty=False)
+    else:
+        run(command, pty=False)
 
 
-def install_requirements(filename, upgrade=False, use_mirrors=True, use_sudo=False, user=None, download_cache=None):
+def install_requirements(filename, upgrade=False, use_mirrors=False,
+                         use_sudo=False, user=None, download_cache=None,
+                         quiet=False, use_python='python'):
     """
     Install Python packages from a pip `requirements file`_.
 
@@ -127,12 +146,14 @@ def install_requirements(filename, upgrade=False, use_mirrors=True, use_sudo=Fal
         options.append('--upgrade')
     if download_cache:
         options.append('--download-cache="%s"' % download_cache)
+    if quiet:
+        options.append('--quiet')
     options = ' '.join(options)
-    command = 'pip install %(options)s -r %(filename)s' % locals()
+    command = '%(use_python)s -m pip install %(options)s -r %(filename)s' % locals()
     if use_sudo:
-        sudo(command, user=user)
+        sudo(command, user=user, pty=False)
     else:
-        run(command)
+        run(command, pty=False)
 
 
 @contextmanager
@@ -150,6 +171,13 @@ def virtualenv(directory, local=False):
 
     .. _virtual environment: http://www.virtualenv.org/
     """
-    join = os.path.join if local else posixpath.join
-    with prefix('. "%s"' % join(directory, 'bin', 'activate')):
+
+    path_mod = os.path if local else posixpath
+
+    # Build absolute path to the virtualenv activation script
+    venv_path = abspath(directory)
+    activate_path = path_mod.join(venv_path, 'bin', 'activate')
+
+    # Source the activation script
+    with prefix('. %s' % quote(activate_path)):
         yield

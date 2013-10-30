@@ -8,9 +8,8 @@ and repositories.
 """
 from __future__ import with_statement
 
-from fabric.api import *
+from fabric.api import hide, run, settings
 
-from fabtools.files import is_file
 from fabtools.utils import run_as_root
 
 
@@ -135,7 +134,7 @@ def groupinstall(group, options=None):
     elif isinstance(options, str):
         options = [options]
     options = " ".join(options)
-    run_as_root('%(manager)s %(options)s groupinstall "%(group)s"' % locals())
+    run_as_root('%(manager)s %(options)s groupinstall "%(group)s"' % locals(), pty=False)
 
 
 def uninstall(packages, options=None):
@@ -172,66 +171,6 @@ def groupuninstall(group, options=None):
     run_as_root('%(manager)s %(options)s groupremove "%(group)s"' % locals())
 
 
-def distrib_id():
-    """
-    Get the ID of the distrib.
-
-    Example::
-
-        from fabtools.rpm import distrib_id
-
-        if distrib_id() == 'CentOS':
-            print('%s is not running RHEL.' % (env.host))
-
-    """
-    with settings(hide('running', 'stdout')):
-        return run('lsb_release --id --short')
-
-
-def distrib_codename():
-    """
-    Get the codename of the distrib.
-
-    Example::
-
-        from fabtools.rpm import distrib_codename
-
-        if distrib_codename() == 'Final':
-            print('%s is running final version of %s %s.'
-              % (env.host, distrib_id(), distrib_release))
-
-    """
-    with settings(hide('running', 'stdout')):
-        return run('lsb_release --codename --short')
-
-
-def distrib_desc():
-    """
-    Get the description of the distrib.
-
-    """
-    with settings(hide('running', 'stdout')):
-        if not is_file('/etc/redhat-release'):
-            return run('lsb_release --desc --short')
-        return run('cat /etc/redhat-release')
-
-
-def distrib_release():
-    """
-    Get the release number of the distrib.
-
-    Example::
-
-        from fabtools.rpm import distrib_release
-
-        if distrib_release() == '6.1' and distrib_id == 'CentOS':
-            print('CentOS 6.2 has been released. Please update.')
-
-    """
-    with settings(hide('running', 'stdout')):
-        return run('lsb_release -r --short')
-
-
 def repolist(status='', media=None):
     """
     Get the list of ``yum`` repositories. Returns enabled repositories by default.
@@ -253,5 +192,5 @@ def repolist(status='', media=None):
         if media:
             repos = run_as_root("%(manager)s repolist %(status)s | sed '$d' | sed -n '/repo id/,$p'" % locals())
         else:
-            repos = run_as_root("%(manager)s repolist %(status)s | sed '/Media\|Debug/d' | sed '$d' | sed -n '/repo id/,$p'" % locals())
+            repos = run_as_root("%(manager)s repolist %(status)s | sed '/Media\\|Debug/d' | sed '$d' | sed -n '/repo id/,$p'" % locals())
         return map(lambda line: line.split(' ')[0], repos.splitlines()[1:])

@@ -4,9 +4,122 @@ System settings
 """
 from __future__ import with_statement
 
-from fabric.api import *
+from fabric.api import hide, run, settings
 
+from fabtools.files import is_file
 from fabtools.utils import run_as_root
+
+
+def distrib_id():
+    """
+    Get the OS distribution ID.
+
+    Returns one of ``"Debian"``, ``"Ubuntu"``, ``"RHEL"``, ``"CentOS"``,
+    ``"Fedora"``, ``"Archlinux"``, ``"SunOS"``...
+
+    Example::
+
+        from fabtools.system import distrib_id
+
+        if distrib_id() != 'Debian':
+            abort(u"Distribution is not supported")
+
+    """
+
+    with settings(hide('running', 'stdout')):
+        kernel = run('uname -s')
+
+        if kernel == 'Linux':
+            # lsb_release works on Ubuntu and Debian >= 6.0
+            # but is not always included in other distros
+            if is_file('/usr/bin/lsb_release'):
+                return run('lsb_release --id --short')
+            else:
+                if is_file('/etc/debian_version'):
+                    return "Debian"
+                elif is_file('/etc/fedora-release'):
+                    return "Fedora"
+                elif is_file('/etc/arch-release'):
+                    return "Archlinux"
+                elif is_file('/etc/redhat-release'):
+                    release = run('cat /etc/redhat-release')
+                    if release.startswith('Red Hat Enterprise Linux'):
+                        return "RHEL"
+                    elif release.startswith('CentOS'):
+                        return "CentOS"
+                    elif release.startswith('Scientific Linux'):
+                        return "SLES"
+        elif kernel == "SunOS":
+            return "SunOS"
+
+
+def distrib_release():
+    """
+    Get the release number of the distribution.
+
+    Example::
+
+        from fabtools.system import distrib_id, distrib_release
+
+        if distrib_id() == 'CentOS' and distrib_release() == '6.1':
+            print(u"CentOS 6.2 has been released. Please upgrade.")
+
+    """
+
+    with settings(hide('running', 'stdout')):
+
+        kernel = run('uname -s')
+
+        if kernel == 'Linux':
+            return run('lsb_release -r --short')
+
+        elif kernel == 'SunOS':
+            return run('uname -v')
+
+
+def distrib_codename():
+    """
+    Get the codename of the Linux distribution.
+
+    Example::
+
+        from fabtools.deb import distrib_codename
+
+        if distrib_codename() == 'precise':
+            print(u"Ubuntu 12.04 LTS detected")
+
+    """
+    with settings(hide('running', 'stdout')):
+        return run('lsb_release --codename --short')
+
+
+def distrib_desc():
+    """
+    Get the description of the Linux distribution.
+
+    For example: ``Debian GNU/Linux 6.0.7 (squeeze)``.
+    """
+    with settings(hide('running', 'stdout')):
+        if not is_file('/etc/redhat-release'):
+            return run('lsb_release --desc --short')
+        return run('cat /etc/redhat-release')
+
+
+def distrib_family():
+    """
+    Get the distribution family.
+
+    Returns one of ``debian``, ``redhat``, ``sun``, ``other``.
+    """
+    distrib = distrib_id()
+    if distrib in ['Debian', 'Ubuntu']:
+        return 'debian'
+    elif distrib in ['RHEL', 'CentOS', 'Fedora']:
+        return 'redhat'
+    elif distrib in ['SunOS']:
+        return 'sun'
+    else:
+        return 'other'
 
 
 def get_hostname():
@@ -63,15 +176,43 @@ def supported_locales():
     Each locale is returned as a ``(locale, charset)`` tuple.
     """
     with settings(hide('running', 'stdout')):
-        res = run('grep -v "^#" /usr/share/i18n/SUPPORTED')
-    return [line.split(' ') for line in res.splitlines()]
+        if distrib_id() == "Archlinux":
+            res = run("cat /etc/locale.gen")
+        else:
+            res = run('cat /usr/share/i18n/SUPPORTED')
+    return [line.strip().split(' ') for line in res.splitlines()
+            if not line.startswith('#')]
 
 
 def get_arch():
     """
-    Get the current architecture.
+    Get the CPU architecture.
+
+    Example::
+
+        from fabtools.system import get_arch
+
+        if get_arch() == 'x86_64':
+            print(u"Running on a 64-bit Intel/AMD system")
 
     """
     with settings(hide('running', 'stdout')):
         arch = run('uname -m')
         return arch
+
+
+def cpus():
+    """
+    Get the number of CPU cores.
+
+    Example::
+
+        from fabtools.system import cpus
+
+        nb_workers = 2 * cpus() + 1
+
+    """
+    with settings(hide('running', 'stdout')):
+        res = run('python -c "import multiprocessing; '
+                  'print(multiprocessing.cpu_count())"')
+        return int(res)

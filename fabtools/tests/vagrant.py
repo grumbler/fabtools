@@ -1,14 +1,13 @@
 from __future__ import with_statement
 
 import os
-import os.path
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from fabric.api import *
+from fabric.api import env, hide, lcd, local, settings, shell_env
 from fabric.state import connections
 
 import fabtools
@@ -93,7 +92,8 @@ class VagrantTestSuite(unittest.BaseTestSuite):
 
             # Make sure the package index is up to date
             with self.settings():
-                fabtools.deb.update_index()
+                if fabtools.system.distrib_family() == 'debian':
+                    fabtools.deb.update_index()
 
             # Run the test suite
             unittest.BaseTestSuite.run(self, result)
@@ -105,21 +105,35 @@ class VagrantTestSuite(unittest.BaseTestSuite):
         """
         Spin up a new vagrant box
         """
+
+        # Support for Vagrant 1.1 providers
+        if ':' in self.current_box:
+            box_name, provider = self.current_box.split(':', 1)
+        else:
+            box_name = self.current_box
+            provider = None
+
         with lcd(os.path.dirname(__file__)):
 
             if not os.path.exists('Vagrantfile') \
-            or not os.environ.get('FABTOOLS_TEST_NODESTROY'):
+               or not os.environ.get('FABTOOLS_TEST_NODESTROY'):
 
                 # Create a fresh vagrant config file
                 local('rm -f Vagrantfile')
-                local('vagrant init %s' % self.current_box)
+                local('vagrant init %s' % box_name)
 
                 # Clean up
                 halt_and_destroy()
 
+            if provider:
+                options = ' --provider %s' % provider
+            else:
+                options = ''
+
             # Spin up the box
             # (retry as it sometimes fails for no good reason)
-            local('vagrant up || vagrant up')
+            cmd = 'vagrant up%s' % options
+            local('%s || %s' % (cmd, cmd))
 
     def ssh_config(self):
         """
@@ -161,7 +175,7 @@ class VagrantTestSuite(unittest.BaseTestSuite):
 
         kwargs['host_string'] = "%s@%s:%s" % (user, hostname, port)
         kwargs['user'] = user
-        kwargs['key_filename'] = config['IdentityFile']
+        kwargs['key_filename'] = config['IdentityFile'].strip('"')
         kwargs['disable_known_hosts'] = True
 
         return settings(*args, **kwargs)
@@ -182,7 +196,9 @@ class VagrantTestCase(unittest.TestCase):
         Run the test case within a Fabric context manager
         """
         with self._suite.settings():
-            unittest.TestCase.run(self, result)
+            http_proxy = os.environ.get('FABTOOLS_HTTP_PROXY', '')
+            with shell_env(http_proxy=http_proxy):
+                unittest.TestCase.run(self, result)
 
     def runTest(self):
         self._callable()
