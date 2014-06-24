@@ -64,7 +64,7 @@ def pip(version=None, use_python='python'):
     """
     Require `pip`_ to be installed.
     """
-    distribute(use_python=use_python)
+    #distribute(use_python=use_python)
     if not is_pip_installed(version, use_python=use_python):
         install_pip(use_python=use_python)
 
