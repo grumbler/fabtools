@@ -28,7 +28,7 @@ from fabtools.python_distribute import (
 from fabtools.system import distrib_family
 
 
-DEFAULT_PIP_VERSION = '1.3.1'
+DEFAULT_PIP_VERSION = '1.5.6'
 
 
 def distribute(use_python='python'):
