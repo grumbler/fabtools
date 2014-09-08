@@ -80,7 +80,7 @@ def _get_python_version(use_python):
 
 
 def install(packages, upgrade=False, use_mirrors=False, use_sudo=False,
-            user=None, download_cache=None, quiet=False, use_python='python'):
+            user=None, download_cache=None, quiet=False, use_python='python', alternate_repo=''):
     """
     Install Python package(s) using `pip`_.
 
@@ -104,6 +104,8 @@ def install(packages, upgrade=False, use_mirrors=False, use_sudo=False,
         options.append('--use-mirrors')
     if upgrade:
         options.append('--upgrade')
+    if alternate_repo:
+        options.append('--index-url=%s' % alternate_repo)
     if download_cache:
         options.append('--download-cache="%s"' % download_cache)
     if quiet:
