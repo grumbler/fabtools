@@ -86,9 +86,9 @@ def is_12_04():
 
 def require_software_properties():
     if is_12_04():
-        package('python-software-properties')
+        package('python-software-properties', update=True)
     else:
-        package('software-properties-common')
+        package('software-properties-common', update=True)
 
 
 def ppa(name, yes=False):
