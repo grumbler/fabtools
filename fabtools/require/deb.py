@@ -84,6 +84,16 @@ def is_12_04():
     return result.succeeded
 
 
+def is_14_04():
+    cmd = 'lsb_release -r | grep -q 14.04'
+    from fabric.context_managers import settings
+    from fabric.operations import run
+
+    with settings(warn_only=True):
+        result = run(cmd)
+    return result.succeeded
+
+
 def require_software_properties():
     if is_12_04():
         package('python-software-properties', update=True)
