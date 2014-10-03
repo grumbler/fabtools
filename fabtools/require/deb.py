@@ -74,6 +74,23 @@ def source(name, uri, distribution, *components):
         update_index()
 
 
+def is_12_04():
+    cmd = 'lsb_release -r | grep -q 12.04'
+    from fabric.context_managers import settings
+    from fabric.operations import run
+
+    with settings(warn_only=True):
+        result = run(cmd)
+    return result.succeeded
+
+
+def require_software_properties():
+    if is_12_04():
+        package('python-software-properties')
+    else:
+        package('software-properties-common')
+
+
 def ppa(name, yes=False):
     """
     Require a `PPA`_ package source.
@@ -93,7 +110,7 @@ def ppa(name, yes=False):
     source = '%(user)s-%(repo)s-%(distrib)s.list' % locals()
 
     if not is_file(source):
-        package('python-software-properties')
+        require_software_properties()
         run_as_root('add-apt-repository %s' % name, pty=False)
         update_index()
 
