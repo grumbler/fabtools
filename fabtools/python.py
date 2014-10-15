@@ -59,7 +59,7 @@ def install_pip(use_python='python'):
 
     """
     with cd('/tmp'):
-        run('curl --silent -O https://raw.github.com/pypa/pip/master/contrib/get-pip.py')
+        run('curl --silent -O https://bootstrap.pypa.io/get-pip.py')
         run_as_root('%(use_python)s get-pip.py' % locals(), pty=False)
 
 
