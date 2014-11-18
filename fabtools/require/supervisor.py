@@ -8,11 +8,10 @@ processes using `supervisor`_.
 .. _supervisor: http://supervisord.org/
 
 """
-from __future__ import with_statement
 
 from fabtools.files import watch
 from fabtools.supervisor import update_config, process_status, start_process
-from fabtools.system import distrib_family
+from fabtools.system import UnsupportedFamily, distrib_family, distrib_id
 
 
 def process(name, **kwargs):
@@ -53,6 +52,7 @@ def process(name, **kwargs):
     from fabtools.require import file as require_file
     from fabtools.require.deb import package as require_deb_package
     from fabtools.require.rpm import package as require_rpm_package
+    from fabtools.require.arch import package as require_arch_package
     from fabtools.require.service import started as require_started
 
     family = distrib_family()
@@ -63,6 +63,11 @@ def process(name, **kwargs):
     elif family == 'redhat':
         require_rpm_package('supervisor')
         require_started('supervisord')
+    elif family == 'arch':
+        require_arch_package('supervisor')
+        require_started('supervisord')
+    else:
+        raise UnsupportedFamily(supported=['debian', 'redhat', 'arch'])
 
     # Set default parameters
     params = {}
@@ -81,6 +86,9 @@ def process(name, **kwargs):
         filename = '/etc/supervisor/conf.d/%(name)s.conf' % locals()
     elif family == 'redhat':
         filename = '/etc/supervisord.d/%(name)s.ini' % locals()
+    elif family == 'arch':
+        filename = '/etc/supervisor.d/%(name)s.ini' % locals()
+
     with watch(filename, callback=update_config, use_sudo=True):
         require_file(filename, contents='\n'.join(lines), use_sudo=True)
 

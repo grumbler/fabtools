@@ -2,7 +2,6 @@
 Utilities
 =========
 """
-from __future__ import with_statement
 
 import os
 import posixpath
@@ -44,3 +43,9 @@ def abspath(path, local=False):
         path = path_mod.join(cwd, path)
 
     return path_mod.normpath(path)
+
+
+def download(url, retry=10):
+    from fabtools.require.curl import command as require_curl
+    require_curl()
+    run('curl --silent --retry %s -O %s' % (retry, url))

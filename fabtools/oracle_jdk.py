@@ -7,7 +7,6 @@ This module provides tools for installing `Oracle JDK`_
 .. _Oracle JDK: http://www.oracle.com/technetwork/java/javase/
 
 """
-from __future__ import with_statement
 
 import re
 
@@ -53,7 +52,7 @@ def install_from_oracle_site(version=DEFAULT_VERSION):
 
     with cd('/tmp'):
         run('rm -rf %s' % jdk_filename)
-        run('wget --no-cookies --no-check-certificate --header="Cookie: gpw_e24=a" ' +
+        run('wget --header "Cookie: oraclelicense=accept-securebackup-cookie" ' +
             '--progress=dot:mega ' +
             '%(jdk_url)s -O /tmp/%(jdk_filename)s' % locals())
 

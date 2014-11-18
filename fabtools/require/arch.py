@@ -1,24 +1,22 @@
 """
-Archlinux packages
-==================
+Arch Linux packages
+===================
 
-This module provides high-level tools for managing Archlinux packages
+This module provides high-level tools for managing Arch Linux packages
 and repositories.
 
 """
-from __future__ import with_statement
 
 from fabtools.arch import (
     install,
     is_installed,
     uninstall,
-    update_index,
 )
 
 
 def package(pkg_name, update=False):
     """
-    Require a archlinux package to be installed.
+    Require an Arch Linux package to be installed.
 
     Example::
 
@@ -32,7 +30,7 @@ def package(pkg_name, update=False):
 
 def packages(pkg_list, update=False):
     """
-    Require several arch packages to be installed.
+    Require several Arch Linux packages to be installed.
 
     Example::
 
@@ -51,7 +49,7 @@ def packages(pkg_list, update=False):
 
 def nopackage(pkg_name):
     """
-    Require a arch package to be uninstalled.
+    Require an Arch Linux package to be uninstalled.
 
     Example::
 
@@ -65,7 +63,7 @@ def nopackage(pkg_name):
 
 def nopackages(pkg_list):
     """
-    Require several arch packages to be uninstalled.
+    Require several Arch Linux packages to be uninstalled.
 
     Example::
 

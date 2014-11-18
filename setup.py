@@ -1,4 +1,5 @@
 import os
+import sys
 
 try:
     from setuptools import setup, find_packages
@@ -7,14 +8,30 @@ except ImportError:
     use_setuptools()
     from setuptools import setup, find_packages
 
+from setuptools.command.test import test as TestCommand
+
 
 def read(filename):
-    return open(os.path.join(os.path.dirname(__file__), filename)).read()
+    path = os.path.join(os.path.dirname(__file__), filename)
+    return open(path).read()
+
+
+class Tox(TestCommand):
+
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        import tox
+        errno = tox.cmdline(self.test_args)
+        sys.exit(errno)
 
 
 setup(
     name='fabtools',
-    version='0.15.6',
+    version='0.19.0',
     description='Tools for writing awesome Fabric files',
     long_description=read('README.rst') + '\n' + read('docs/CHANGELOG.rst'),
     author='Ronan Amicel',
@@ -22,13 +39,15 @@ setup(
     url='http://fabtools.readthedocs.org/',
     license='BSD',
     install_requires=[
-        "fabric>=1.6.0",
+        "fabric>=1.7.0",
     ],
     setup_requires=[],
     tests_require=[
-        "unittest2",
-        "mock",
+        'tox',
     ],
+    cmdclass = {
+        'test': Tox,
+    },
     packages=find_packages(exclude=['ez_setup', 'tests']),
     include_package_data=True,
     zip_safe=False,
@@ -42,7 +61,6 @@ setup(
         'Operating System :: Unix',
         'Operating System :: POSIX',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.5',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Topic :: Software Development',

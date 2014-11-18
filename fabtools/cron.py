@@ -5,14 +5,9 @@ Cron tasks
 This module provides tools to manage periodic tasks using cron.
 
 """
-from __future__ import with_statement
-
-from tempfile import NamedTemporaryFile
-
-from fabtools.files import upload_template
 
 
-def add_task(name, timespec, user, command):
+def add_task(name, timespec, user, command, environment=None):
     """
     Add a cron task.
 
@@ -21,6 +16,9 @@ def add_task(name, timespec, user, command):
     You can use any valid `crontab(5)`_ *timespec*, including the
     ``@hourly``, ``@daily``, ``@weekly``, ``@monthly`` and ``@yearly``
     shortcuts.
+
+    You can also provide an optional dictionary of environment variables
+    that should be set when running the periodic command.
 
     Examples::
 
@@ -35,17 +33,29 @@ def add_task(name, timespec, user, command):
     .. _crontab(5): http://manpages.debian.net/cgi-bin/man.cgi?query=crontab&sektion=5
 
     """
-    with NamedTemporaryFile() as script:
-        script.write('%(timespec)s %(user)s %(command)s\n' % locals())
-        script.flush()
-        upload_template('/etc/cron.d/%(name)s' % locals(),
-                        script.name,
-                        context={},
-                        chown=True,
-                        use_sudo=True)
+    if environment is None:
+        environment = {}
+
+    lines = []
+
+    # Write optional environment variables first
+    for key, value in environment.iteritems():
+        lines.append('%(key)s=%(value)s\n' % locals())
+
+    # Write the main crontab line
+    lines.append('%(timespec)s %(user)s %(command)s\n' % locals())
+
+    from fabtools.require.files import file as require_file
+    require_file(
+        path='/etc/cron.d/%(name)s' % locals(),
+        contents=''.join(lines),
+        owner='root',
+        mode='0644',
+        use_sudo=True,
+    )
 
 
-def add_daily(name, user, command):
+def add_daily(name, user, command, environment=None):
     """
     Shortcut to add a daily cron task.
 
@@ -57,4 +67,4 @@ def add_daily(name, user, command):
         fabtools.cron.add_daily('backup', 'root', '/usr/local/bin/backup.sh')
 
     """
-    add_task(name, '@daily', user, command)
+    add_task(name, '@daily', user, command, environment)

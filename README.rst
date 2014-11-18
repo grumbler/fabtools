@@ -88,12 +88,6 @@ Supported targets
 
 * SmartOS (Joyent)
 
-* Archlinux
+* Arch Linux
 
 Contributions to help support other Unix/Linux distributions are welcome!
-
-Automatic integration test result
----------------------------------
-
-.. image:: https://api.travis-ci.org/ronnix/fabtools.png
-    :target: http://travis-ci.org/ronnix/fabtools

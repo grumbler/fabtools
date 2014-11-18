@@ -2,7 +2,6 @@
 Disk Tools
 ==========
 """
-from __future__ import with_statement
 
 import re
 
@@ -27,7 +26,7 @@ def partitions(device=""):
         if r:
             print("You can format these partitions")
     """
-    partitions = {}
+    partitions_list = {}
     with settings(hide('running', 'stdout')):
         res = run_as_root('sfdisk -d %(device)s' % locals())
 
@@ -35,9 +34,30 @@ def partitions(device=""):
         for line in res.splitlines():
             m = spart.search(line)
             if m:
-                partitions[m.group('pname')] = int(m.group('ptypeid'), 16)
+                partitions_list[m.group('pname')] = int(m.group('ptypeid'), 16)
 
-    return partitions
+    return partitions_list
+
+
+def getdevice_by_uuid(uuid):
+    """
+    Get a HDD device by uuid
+
+    Example::
+
+        from fabtools.disk import getdevice_by_uuid
+
+        device = getdevice_by_uuid("356fafdc-21d5-408e-a3e9-2b3f32cb2a8c")
+        if device:
+            mount(device,'/mountpoint')
+    """
+    with settings(hide('running', 'warnings', 'stdout'), warn_only=True):
+        res = run_as_root('blkid -U %s' % uuid)
+
+        if not res.succeeded:
+            return None
+
+        return res
 
 
 def mount(device, mountpoint):

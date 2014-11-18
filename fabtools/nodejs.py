@@ -11,7 +11,6 @@ packages using `npm`_.
 .. _npm: http://npmjs.org/
 
 """
-from __future__ import with_statement
 
 try:
     import json
@@ -27,9 +26,11 @@ from fabtools.utils import run_as_root
 DEFAULT_VERSION = '0.10.13'
 
 
-def install_from_source(version=DEFAULT_VERSION):
+def install_from_source(version=DEFAULT_VERSION, checkinstall=False):
     """
     Install Node JS from source.
+
+    If *checkinstall* is ``True``, a distribution package will be built.
 
     ::
 
@@ -49,20 +50,26 @@ def install_from_source(version=DEFAULT_VERSION):
     family = distrib_family()
 
     if family == 'debian':
-        require_deb_packages([
+        packages = [
             'build-essential',
             'libssl-dev',
             'python',
-        ])
+        ]
+        if checkinstall:
+            packages.append('checkinstall')
+        require_deb_packages(packages)
 
     elif family == 'redhat':
-        require_rpm_packages([
+        packages = [
             'gcc',
             'gcc-c++',
             'make',
             'openssl-devel',
             'python',
-        ])
+        ]
+        if checkinstall:
+            packages.append('checkinstall')
+        require_rpm_packages(packages)
 
     filename = 'node-v%s.tar.gz' % version
     foldername = filename[0:-7]
@@ -75,25 +82,29 @@ def install_from_source(version=DEFAULT_VERSION):
     with cd(foldername):
         run('./configure')
         run('make -j%d' % (cpus() + 1))
-        run_as_root('make install')
+        if checkinstall:
+            run_as_root('checkinstall -y --pkgname=nodejs --pkgversion=%(version) '
+                        '--showinstall=no make install' % locals())
+        else:
+            run_as_root('make install')
     run('rm -rf %(filename)s %(foldername)s' % locals())
 
 
-def version():
+def version(node='node'):
     """
     Get the version of Node.js currently installed.
 
     Returns ``None`` if it is not installed.
     """
     with settings(hide('running', 'stdout', 'warnings'), warn_only=True):
-        res = run('/usr/local/bin/node --version')
+        res = run('%(node)s --version' % locals())
     if res.failed:
         return None
     else:
         return res[1:]
 
 
-def install_package(package, version=None, local=False):
+def install_package(package, version=None, local=False, npm='npm'):
     """
     Install a Node.js package.
 
@@ -114,12 +125,12 @@ def install_package(package, version=None, local=False):
         package += '@%s' % version
 
     if local:
-        run('/usr/local/bin/npm install -l %s' % package)
+        run('%(npm)s install -l %(package)s' % locals())
     else:
-        run_as_root('HOME=/root /usr/local/bin/npm install -g %s' % package)
+        run_as_root('HOME=/root %(npm)s install -g %(package)s' % locals())
 
 
-def install_dependencies():
+def install_dependencies(npm='npm'):
     """
     Install Node.js package dependencies.
 
@@ -136,10 +147,10 @@ def install_dependencies():
             nodejs.install_dependencies()
 
     """
-    run('/usr/local/bin/npm install')
+    run('%(npm)s install' % locals())
 
 
-def package_version(package, local=False):
+def package_version(package, local=False, npm='npm'):
     """
     Get the installed version of a Node.js package.
 
@@ -154,9 +165,9 @@ def package_version(package, local=False):
     options = ' '.join(options)
 
     with hide('running', 'stdout'):
-        res = run('/usr/local/bin/npm list %s' % options)
+        res = run('%(npm)s list %(options)s' % locals())
 
-    dependencies = json.loads(res)['dependencies']
+    dependencies = json.loads(res).get('dependencies', {})
     pkg_data = dependencies.get(package)
     if pkg_data:
         return pkg_data['version']
@@ -164,19 +175,19 @@ def package_version(package, local=False):
         return None
 
 
-def update_package(package, local=False):
+def update_package(package, local=False, npm='npm'):
     """
     Update a Node.js package.
 
     If *local* is ``True``, the package will be updated locally.
     """
     if local:
-        run('/usr/local/bin/npm update -l %s' % package)
+        run('%(npm)s update -l %(package)s' % locals())
     else:
-        run_as_root('HOME=/root /usr/local/bin/npm update -g %s' % package)
+        run_as_root('HOME=/root %(npm)s update -g %(package)s' % locals())
 
 
-def uninstall_package(package, version=None, local=False):
+def uninstall_package(package, version=None, local=False, npm='npm'):
     """
     Uninstall a Node.js package.
 
@@ -197,6 +208,6 @@ def uninstall_package(package, version=None, local=False):
         package += '@%s' % version
 
     if local:
-        run('/usr/local/bin/npm uninstall -l %s' % package)
+        run('%(npm)s uninstall -l %(package)s' % locals())
     else:
-        run_as_root('HOME=/root /usr/local/bin/npm uninstall -g %s' % package)
+        run_as_root('HOME=/root %(npm)s uninstall -g %(package)s' % locals())
