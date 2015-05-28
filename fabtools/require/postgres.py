@@ -3,7 +3,7 @@ PostgreSQL users and databases
 ==============================
 """
 
-from fabric.api import cd, hide, run, settings
+from fabric.api import cd, hide, run, settings, abort
 from fabtools.files import is_file
 from fabtools.postgres import (
     create_database,
@@ -74,7 +74,7 @@ def user(name, password, superuser=False, createdb=False,
 
 
 def database(name, owner, template='template0', encoding='UTF8',
-             locale='en_US.UTF-8'):
+             locale='en_US.UTF-8', allow_restart=False):
     """
     Require a PostgreSQL database.
 
@@ -83,11 +83,23 @@ def database(name, owner, template='template0', encoding='UTF8',
         from fabtools import require
 
         require.postgres.database('myapp', owner='dbuser')
-
     """
-    if not database_exists(name):
 
-        if locale not in run('locale -a').split():
+    locale_transform = lambda l: l.strip().lower().replace('-', '')
+
+    if not database_exists(name):
+        locales = map(
+            locale_transform,
+            run('locale -a').split()
+        )
+        if locale_transform(locale) not in locales:
+            if not allow_restart:
+                abort(
+                    'New locale "{}" must be installed and '
+                    'postgres must be restarted after that'.format(
+                        locale
+                    )
+                )
             require_locale(locale)
             restarted(_service_name())
 
