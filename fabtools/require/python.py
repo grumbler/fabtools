@@ -77,7 +77,8 @@ def pip(
 
 
 def package(pkg_name, url=None, pip_cmd='pip', python_cmd='python',
-            allow_external=False, allow_unverified=False, **kwargs):
+            allow_external=False, allow_unverified=False, trusted_hosts=None,
+            **kwargs):
     """
     Require a Python package.
 
@@ -111,11 +112,13 @@ def package(pkg_name, url=None, pip_cmd='pip', python_cmd='python',
                 pip_cmd=pip_cmd,
                 allow_external=[url or pkg_name] if allow_external else [],
                 allow_unverified=[url or pkg_name] if allow_unverified else [],
+                trusted_hosts=trusted_hosts,
                 **kwargs)
 
 
 def packages(pkg_list, pip_cmd='pip', python_cmd='python',
-             allow_external=None, allow_unverified=None, **kwargs):
+             allow_external=None, allow_unverified=None, trusted_hosts=None,
+             **kwargs):
     """
     Require several Python packages.
 
@@ -141,11 +144,14 @@ def packages(pkg_list, pip_cmd='pip', python_cmd='python',
                 pip_cmd=pip_cmd,
                 allow_external=allow_external,
                 allow_unverified=allow_unverified,
+                trusted_hosts=trusted_hosts,
                 **kwargs)
 
 
 def requirements(filename, pip_cmd='pip', python_cmd='python',
-                 allow_external=None, allow_unverified=None, **kwargs):
+                 allow_external=None, allow_unverified=None,
+                 trusted_hosts=None,
+                 **kwargs):
     """
     Require Python packages from a pip `requirements file`_.
 
@@ -168,7 +174,9 @@ def requirements(filename, pip_cmd='pip', python_cmd='python',
     """
     pip(MIN_PIP_VERSION, python_cmd=python_cmd)
     install_requirements(filename, pip_cmd=pip_cmd, allow_external=allow_external,
-                         allow_unverified=allow_unverified, **kwargs)
+                         allow_unverified=allow_unverified,
+                         trusted_hosts=trusted_hosts,
+                         **kwargs)
 
 
 def virtualenv(directory, system_site_packages=False, venv_python=None,

@@ -108,7 +108,7 @@ def is_installed(package, pip_cmd='pip'):
 
 def install(packages, upgrade=False, download_cache=None, allow_external=None,
             allow_unverified=None, quiet=False, pip_cmd='pip', use_sudo=False,
-            user=None, exists_action=None, alternate_repo=''):
+            user=None, exists_action=None, alternate_repo='', trusted_hosts=None):
     """
     Install Python package(s) using `pip`_.
 
@@ -145,6 +145,9 @@ def install(packages, upgrade=False, download_cache=None, allow_external=None,
     elif allow_unverified is True:
         allow_unverified = packages
 
+    if trusted_hosts is None:
+        trusted_hosts = []
+
     options = []
     if upgrade:
         options.append('--upgrade')
@@ -160,6 +163,8 @@ def install(packages, upgrade=False, download_cache=None, allow_external=None,
         options.append('--allow-unverified="%s"' % package)
     if exists_action:
         options.append('--exists-action=%s' % exists_action)
+    for host in trusted_hosts:
+        options.append('--trusted-host="%s"' % host)
     options = ' '.join(options)
 
     packages = ' '.join(packages)
@@ -175,7 +180,8 @@ def install(packages, upgrade=False, download_cache=None, allow_external=None,
 def install_requirements(filename, upgrade=False, download_cache=None,
                          allow_external=None, allow_unverified=None,
                          quiet=False, pip_cmd='pip', use_sudo=False,
-                         user=None, exists_action=None, alternate_repo=''):
+                         user=None, exists_action=None, alternate_repo='',
+                         trusted_hosts=None):
     """
     Install Python packages from a pip `requirements file`_.
 
@@ -193,6 +199,9 @@ def install_requirements(filename, upgrade=False, download_cache=None,
     if allow_unverified is None:
         allow_unverified = []
 
+    if trusted_hosts is None:
+        trusted_hosts = []
+
     options = []
     if upgrade:
         options.append('--upgrade')
@@ -208,6 +217,8 @@ def install_requirements(filename, upgrade=False, download_cache=None,
         options.append('--quiet')
     if exists_action:
         options.append('--exists-action=%s' % exists_action)
+    for host in trusted_hosts:
+        options.append('--trusted-host="%s"' % host)
     options = ' '.join(options)
 
     command = '%(pip_cmd)s install %(options)s -r %(filename)s' % locals()
